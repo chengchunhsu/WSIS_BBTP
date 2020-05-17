@@ -9,6 +9,9 @@ from maskrcnn_benchmark.modeling.roi_heads.mask_head.inference import Masker
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 
+from maskrcnn_benchmark.utils.comm import synchronize
+from scipy.io import savemat
+
 
 def do_coco_evaluation(
     dataset,
@@ -18,6 +21,7 @@ def do_coco_evaluation(
     iou_types,
     expected_results,
     expected_results_sigma_tol,
+    save_pred_as_mat,
 ):
     logger = logging.getLogger("maskrcnn_benchmark.inference")
 
@@ -44,7 +48,7 @@ def do_coco_evaluation(
         coco_results["bbox"] = prepare_for_coco_detection(predictions, dataset)
     if "segm" in iou_types:
         logger.info("Preparing segm results")
-        coco_results["segm"] = prepare_for_coco_segmentation(predictions, dataset)
+        coco_results["segm"] = prepare_for_coco_segmentation(predictions, dataset, save_pred_as_mat)
     if 'keypoints' in iou_types:
         logger.info('Preparing keypoints results')
         coco_results['keypoints'] = prepare_for_coco_keypoint(predictions, dataset)
@@ -101,7 +105,7 @@ def prepare_for_coco_detection(predictions, dataset):
     return coco_results
 
 
-def prepare_for_coco_segmentation(predictions, dataset):
+def prepare_for_coco_segmentation(predictions, dataset, save_pred_as_mat=False):
     import pycocotools.mask as mask_util
     import numpy as np
 
@@ -152,6 +156,48 @@ def prepare_for_coco_segmentation(predictions, dataset):
                 for k, rle in enumerate(rles)
             ]
         )
+
+    if save_pred_as_mat:
+        
+        print("Saving segm results as .mat file...")
+
+        masker = Masker(threshold=-1, padding=1)
+        d = {}
+        for image_id, prediction in tqdm(enumerate(predictions)):
+
+            original_id = dataset.id_to_img_map[image_id]
+            if len(prediction) == 0:
+                continue
+
+            img_info = dataset.get_img_info(image_id)
+            img_name = img_info["file_name"].replace('.jpg', '')
+            image_width = img_info["width"]
+            image_height = img_info["height"]
+            prediction = prediction.resize((image_width, image_height))
+
+            # Masker is necessary only if masks haven't been resized.
+            masks = prediction.get_field("mask").clone()
+            if list(masks.shape[-2:]) != [image_height, image_width]:
+                masks = masker(masks.expand(1, -1, -1, -1, -1), prediction)
+                masks = masks[0]
+
+            masks = masks.numpy()
+            scores = prediction.get_field("scores").clone().numpy()
+            labels = prediction.get_field("labels").clone().numpy()
+
+            # Save
+            if ("img_" + str(original_id) + "_masks") in d:
+                d.update({"img_" + str(original_id) + "_masks": np.concatenate((d["img_" + str(original_id) + "_masks"], masks), axis=0)})
+                d.update({"img_" + str(original_id) + "_scores": np.concatenate((d["img_" + str(original_id) + "_scores"], scores), axis=None)})
+                d.update({"img_" + str(original_id) + "_labels": np.concatenate((d["img_" + str(original_id) + "_labels"], labels), axis=None)})
+            else:
+                d.update({"img_" + str(original_id) + "_masks": masks})
+                d.update({"img_" + str(original_id) + "_scores": scores})
+                d.update({"img_" + str(original_id) + "_labels": labels})
+                d.update({"img_" + str(original_id) + "_name": img_name})
+            
+        savemat("mask.mat", d)
+
     return coco_results
 
 

@@ -88,6 +88,7 @@ def main():
             device=cfg.MODEL.DEVICE,
             expected_results=cfg.TEST.EXPECTED_RESULTS,
             expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
+            save_pred_as_mat=cfg.TEST.SAVE_PRED_AS_MAT,
             output_folder=output_folder,
         )
         synchronize()

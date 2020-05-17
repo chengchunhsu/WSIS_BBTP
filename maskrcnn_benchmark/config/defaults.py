@@ -413,6 +413,8 @@ _C.TEST.EXPECTED_RESULTS_SIGMA_TOL = 4
 _C.TEST.IMS_PER_BATCH = 8
 # Number of detections per image
 _C.TEST.DETECTIONS_PER_IMG = 100
+# Save the predictions as .mat file for further processing 
+_C.TEST.SAVE_PRED_AS_MAT = False
 
 
 # ---------------------------------------------------------------------------- #

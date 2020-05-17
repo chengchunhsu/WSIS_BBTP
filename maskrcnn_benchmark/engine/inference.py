@@ -65,6 +65,7 @@ def inference(
         device="cuda",
         expected_results=(),
         expected_results_sigma_tol=4,
+        save_pred_as_mat=False,
         output_folder=None,
 ):
     # convert to a torch.device for efficiency
@@ -107,6 +108,7 @@ def inference(
         iou_types=iou_types,
         expected_results=expected_results,
         expected_results_sigma_tol=expected_results_sigma_tol,
+        save_pred_as_mat=save_pred_as_mat,
     )
 
     return evaluate(dataset=dataset,
