@@ -103,7 +103,7 @@ To avoid such issue, we recommend to evaluate the predicted results via standard
 
 **1. Save the predictions**
 
-- Modify the key `TEST.SAVE_PRED_AS_MAT` as `True` in config files ([example](https://github.com/chengchunhsu/WSIS_BBTP/blob/c53d109100def34cc702086e0d94aa3959237e68/configs/BBTP/e2e_mask_rcnn_R_101_FPN_4x_voc_aug_cocostyle.yaml#L51)).
+- Modify the key `TEST.SAVE_PRED_AS_MAT` as `True` in config files ([example](https://github.com/chengchunhsu/WSIS_BBTP/blob/master/configs/BBTP/e2e_mask_rcnn_R_101_FPN_4x_voc_aug_cocostyle.yaml#L51)).
 - Run `test_voc_aug.sh` or `test_voc_coco_aug.sh`, then the predictions will be saved as *mask.mat* in the directory. (the mat file is usually around 4~5 GB)
 
 **2. Evaluate**
@@ -145,12 +145,12 @@ We provide the model weights and mask files of all experiments in this section.
 
 
 
-All experiments is running on following environments:
+**Environments**
 
-- **Hardware**
+- Hardware
   - 4 NVIDIA 1080 Ti GPUs
 
-- **Software**
+- Software
   - PyTorch version: 1.0.1
   - CUDA 10.2
 
