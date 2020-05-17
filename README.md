@@ -2,7 +2,7 @@
 
 [[PDF\]](https://papers.nips.cc/paper/8885-weakly-supervised-instance-segmentation-using-the-bounding-box-tightness-prior.pdf) [[BibTeX\]](https://papers.nips.cc/paper/8885-weakly-supervised-instance-segmentation-using-the-bounding-box-tightness-prior/bibtex) [[Supplemental\]](https://papers.nips.cc/paper/8885-weakly-supervised-instance-segmentation-using-the-bounding-box-tightness-prior-supplemental.zip)
 
-![](.\fig\intro.png)
+![](/fig/intro.png)
 
 
 
