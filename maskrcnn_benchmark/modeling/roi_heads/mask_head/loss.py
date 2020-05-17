@@ -28,8 +28,7 @@ def project_masks_on_boxes(segmentation_masks, proposals, discretization_size):
     device = proposals.bbox.device
     proposals = proposals.convert("xyxy")
     assert segmentation_masks.size == proposals.size, "{}, {}".format(
-        segmentation_masks, proposals
-    )
+        segmentation_masks, proposals)
     # TODO put the proposals on the CPU, as the representation for the
     # masks is not efficient GPU-wise (possibly several small tensors for
     # representing a single instance mask)
@@ -65,8 +64,7 @@ def project_boxes_on_boxes(matched_bboxes, proposals, discretization_size):
     proposals = proposals.convert("xyxy")
     original_size = proposals.size
     assert matched_bboxes.size == proposals.size, "{}, {}".format(
-        matched_bboxes, proposals
-    )
+        matched_bboxes, proposals)
 
     # TODO put the proposals on the CPU, as the representation for the
     # masks is not efficient GPU-wise (possibly several small tensors for
@@ -77,7 +75,8 @@ def project_boxes_on_boxes(matched_bboxes, proposals, discretization_size):
     # Generate segmentation masks based on matched_bboxes
     polygons = []
     for matched_bbox in matched_bboxes:
-        x1, y1, x2, y2 = matched_bbox[0], matched_bbox[1], matched_bbox[2], matched_bbox[3]
+        x1, y1, x2, y2 = matched_bbox[0], matched_bbox[1], matched_bbox[
+            2], matched_bbox[3]
         p = [[x1, y1, x1, y2, x2, y2, x2, y1]]
         polygons.append(p)
     segmentation_masks = SegmentationMask(polygons, original_size)
@@ -104,56 +103,29 @@ class MaskRCNNLossComputation(object):
         """
         self.proposal_matcher = proposal_matcher
         self.discretization_size = discretization_size
-        self.aff_matrixes = [[-1, 0], [1, 0], [0, -1], [0, 1]]
-        self.aff_maps = []
-        self.ctr_maps = []
         mask_h = mask_w = self.discretization_size
-        for col in range(mask_h):
-            for row in range(mask_w):
-                for aff_matrix in self.aff_matrixes:
-                    ctr_map = torch.zeros((mask_h, mask_w), device='cuda')
-                    ctr_map[col][row] = 1
-                    self.ctr_maps.append(ctr_map)
 
-                    aff_map = torch.zeros((mask_h, mask_w), device='cuda')
-                    x_offset, y_offset = aff_matrix[0], aff_matrix[1]
-                    pix_x = row+x_offset
-                    pix_y = col+y_offset
-                    if pix_x < 0 or pix_y < 0 or pix_x >= mask_w or pix_y >= mask_h:
-                        continue
-                    aff_map[pix_y][pix_x] = 1
-                    self.aff_maps.append(aff_map)
+        self.center_weight = torch.tensor([[0., 0., 0.], [0., 1., 0.],
+                                           [0., 0., 0.]])  #, device=device)
 
-        self.center_weight = torch.tensor([[0., 0., 0.],
-                                           [0., 1., 0.],
-                                           [0., 0., 0.]])#, device=device)
-                                           
         # TODO: modified this as one conv with 8 channels for efficiency
         self.pairwise_weights_list = [
-            torch.tensor([[0., 0., 0.],
-                          [1., 0., 0.],
-                          [0., 0., 0.]]),#, device=device),
-            torch.tensor([[0., 0., 0.],
-                          [0., 0., 1.],
-                          [0., 0., 0.]]),#, device=device),
-            torch.tensor([[0., 1., 0.],
-                          [0., 0., 0.],
-                          [0., 0., 0.]]),#, device=device),
-            torch.tensor([[0., 0., 0.],
-                          [0., 0., 0.],
-                          [0., 1., 0.]]),#, device=device),
-            torch.tensor([[1., 0., 0.],
-                          [0., 0., 0.],
-                          [0., 0., 0.]]),#, device=device),
-            torch.tensor([[0., 0., 1.],
-                          [0., 0., 0.],
-                          [0., 0., 0.]]),#, device=device),
-            torch.tensor([[0., 0., 0.],
-                          [0., 0., 0.],
-                          [1., 0., 0.]]),#, device=device),
-            torch.tensor([[0., 0., 0.],
-                          [0., 0., 0.],
-                          [0., 0., 1.]]),#, device=device),
+            torch.tensor([[0., 0., 0.], [1., 0., 0.],
+                          [0., 0., 0.]]),  #, device=device),
+            torch.tensor([[0., 0., 0.], [0., 0., 1.],
+                          [0., 0., 0.]]),  #, device=device),
+            torch.tensor([[0., 1., 0.], [0., 0., 0.],
+                          [0., 0., 0.]]),  #, device=device),
+            torch.tensor([[0., 0., 0.], [0., 0., 0.],
+                          [0., 1., 0.]]),  #, device=device),
+            torch.tensor([[1., 0., 0.], [0., 0., 0.],
+                          [0., 0., 0.]]),  #, device=device),
+            torch.tensor([[0., 0., 1.], [0., 0., 0.],
+                          [0., 0., 0.]]),  #, device=device),
+            torch.tensor([[0., 0., 0.], [0., 0., 0.],
+                          [1., 0., 0.]]),  #, device=device),
+            torch.tensor([[0., 0., 0.], [0., 0., 0.],
+                          [0., 0., 1.]]),  #, device=device),
         ]
 
     def match_targets_to_proposals(self, proposal, target):
@@ -175,8 +147,7 @@ class MaskRCNNLossComputation(object):
         masks = []
         for proposals_per_image, targets_per_image in zip(proposals, targets):
             matched_targets = self.match_targets_to_proposals(
-                proposals_per_image, targets_per_image
-            )
+                proposals_per_image, targets_per_image)
             matched_idxs = matched_targets.get_field("matched_idxs")
 
             labels_per_image = matched_targets.get_field("labels")
@@ -195,9 +166,9 @@ class MaskRCNNLossComputation(object):
 
             positive_proposals = proposals_per_image[positive_inds]
 
-            masks_per_image = project_masks_on_boxes(
-                segmentation_masks, positive_proposals, self.discretization_size
-            )
+            masks_per_image = project_masks_on_boxes(segmentation_masks,
+                                                     positive_proposals,
+                                                     self.discretization_size)
 
             labels.append(labels_per_image)
             masks.append(masks_per_image)
@@ -211,8 +182,7 @@ class MaskRCNNLossComputation(object):
         labels = []
         for proposals_per_image, targets_per_image in zip(proposals, targets):
             matched_targets = self.match_targets_to_proposals(
-                proposals_per_image, targets_per_image
-            )
+                proposals_per_image, targets_per_image)
             matched_idxs = matched_targets.get_field("matched_idxs")
 
             labels_per_image = matched_targets.get_field("labels")
@@ -235,8 +205,7 @@ class MaskRCNNLossComputation(object):
             device = proposals_per_image.bbox.device
 
             matched_targets = self.match_targets_to_proposals(
-                proposals_per_image, targets_per_image
-            )
+                proposals_per_image, targets_per_image)
             matched_idxs = matched_targets.get_field("matched_idxs")
 
             labels_per_image = matched_targets.get_field("labels")
@@ -251,24 +220,29 @@ class MaskRCNNLossComputation(object):
             pos_inds = torch.nonzero(labels_per_image > 0).squeeze(1)
 
             # delete field "mask"
-            new_matched_targets = matched_targets.copy_with_fields(["matched_idxs", "labels"])
+            new_matched_targets = matched_targets.copy_with_fields(
+                ["matched_idxs", "labels"])
             # generate bbox corresponding proposals
-            # TODO for now, whole mask (and thus all col/row label) of positive sample is 1, and of negative sample is 0
-            #       because fg iou threshold is too high, when
             pos_masks_per_image = project_boxes_on_boxes(
-                new_matched_targets[pos_inds], proposals_per_image[pos_inds], self.discretization_size
-            )
+                new_matched_targets[pos_inds], proposals_per_image[pos_inds],
+                self.discretization_size)
 
             # generate label per image
             # initialize as zeros, and thus all labels of negative sample is zeros
             M = self.discretization_size
-            labels_per_image = torch.zeros((len(proposals_per_image.bbox), M+M), device=device)  # (n_proposal, 56)
+            labels_per_image = torch.zeros(
+                (len(proposals_per_image.bbox), M + M),
+                device=device)  # (n_proposal, 56)
 
             # generate label of positive sample
             pos_labels = []
             for mask in pos_masks_per_image:
-                label_col = [torch.any(mask[col, :] > 0) for col in range(mask.size(0))]
-                label_row = [torch.any(mask[:, row] > 0) for row in range(mask.size(1))]
+                label_col = [
+                    torch.any(mask[col, :] > 0) for col in range(mask.size(0))
+                ]
+                label_row = [
+                    torch.any(mask[:, row] > 0) for row in range(mask.size(1))
+                ]
                 label = torch.stack(label_col + label_row)
                 pos_labels.append(label)
             pos_labels = torch.stack(pos_labels).float()
@@ -288,29 +262,9 @@ class MaskRCNNLossComputation(object):
         Return:
             mask_loss (Tensor): scalar tensor containing the loss
         """
-        # original
-        # labels, mask_targets = self.prepare_targets(proposals, targets)
-
-        # labels = cat(labels, dim=0)
-        # mask_targets = cat(mask_targets, dim=0)
-
-        # positive_inds = torch.nonzero(labels > 0).squeeze(1)
-        # labels_pos = labels[positive_inds]
-
-        # # torch.mean (in binary_cross_entropy_with_logits) doesn't
-        # # accept empty tensors, so handle it separately
-        # if mask_targets.numel() == 0:
-        #     return mask_logits.sum() * 0
-
-        # mask_loss = F.binary_cross_entropy_with_logits(
-        #     mask_logits[positive_inds, labels_pos], mask_targets
-        # )
-        # return mask_loss
-
-
         # MIL term
         # Stack mil score and mask_logits
-        if len(mil_score.shape) > 2 or mask_logits.size(1) > 1:   # multi-class
+        if len(mil_score.shape) > 2 or mask_logits.size(1) > 1:  # multi-class
             class_labels, _ = self.prepare_targets(proposals, targets)
             class_labels = cat(class_labels, dim=0)
             if len(mil_score.shape) > 2:
@@ -321,17 +275,15 @@ class MaskRCNNLossComputation(object):
                 mask_logits = torch.stack(mask_logits).unsqueeze(1)
 
         # Prepare target labels for mil loss of each col/row.
-        labels = self.prepare_targets_cr(proposals, targets)    # for both positive/negative samples
+        labels = self.prepare_targets_cr(
+            proposals, targets)  # for both positive/negative samples
         labels = cat(labels, dim=0)
 
         # Compute MIL term for each col/row MIL
         mil_loss = F.binary_cross_entropy_with_logits(mil_score, labels)
 
-
         # Pairwise term
         device = mask_logits.device
-        ctr_maps = self.ctr_maps
-        aff_maps = self.aff_maps
         mask_h, mask_w = mask_logits.size(2), mask_logits.size(3)
         pairwise_loss = []
 
@@ -340,7 +292,7 @@ class MaskRCNNLossComputation(object):
 
         # Compute pairwise loss for each col/row MIL
         for w in self.pairwise_weights_list:
-            conv = torch.nn.Conv2d(1, 1, 3, bias=False, padding=(1,1))
+            conv = torch.nn.Conv2d(1, 1, 3, bias=False, padding=(1, 1))
             weights = self.center_weight - w
             weights = weights.view(1, 1, 3, 3).to(device)
             conv.weight = torch.nn.Parameter(weights)
@@ -348,11 +300,10 @@ class MaskRCNNLossComputation(object):
                 param.requires_grad = False
             aff_map = conv(mask_logits_normalize)
 
-            cur_loss = mask_logits_normalize * (aff_map ** 2)
+            cur_loss = (aff_map**2)
             cur_loss = torch.mean(cur_loss)
             pairwise_loss.append(cur_loss)
         pairwise_loss = torch.mean(torch.stack(pairwise_loss))
-
 
         return 1.0 * mil_loss, 0.05 * pairwise_loss
 
@@ -365,7 +316,6 @@ def make_roi_mask_loss_evaluator(cfg):
     )
 
     loss_evaluator = MaskRCNNLossComputation(
-        matcher, cfg.MODEL.ROI_MASK_HEAD.RESOLUTION
-    )
+        matcher, cfg.MODEL.ROI_MASK_HEAD.RESOLUTION)
 
     return loss_evaluator
